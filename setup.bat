@@ -48,3 +48,6 @@ pip install -r requirements.txt
 REM Step 8: Run the Python script
 echo Running main.py...
 python main.py || python3 main.py
+
+REM Step 9: Keep the environment activated after the script ends
+cmd /k "env\Scripts\activate"
