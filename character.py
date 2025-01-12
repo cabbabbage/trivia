@@ -13,6 +13,7 @@ from pydub.playback import play
 import io
 import base64
 from playsound import playsound
+import pygame
 
 # Set your OpenAI API key. Alternatively, you can set the OPENAI_API_KEY
 # environment variable before running this script.
@@ -24,7 +25,7 @@ class Character:
         self.correct_answer = ""
         self.player_answer = ""
         self.user_text = ""
-        with open("./key.txt", "r") as file:
+        with open("key.txt", "r") as file:
             self.api_key = file.readline().strip()
 
 
@@ -110,15 +111,18 @@ class Character:
 
             # Extract and decode audio response
             audio_data = response_data.get("choices", [{}])[0].get("message", {}).get("audio", {}).get("data")
-            if not audio_data:
-                raise Exception("No audio data received from the API.")
+            if audio_data:
+                try:
+                    # Delete existing response.wav if it exists
+                    if os.path.exists("response.wav"):
+                        os.remove("response.wav")
 
-            wav_bytes = base64.b64decode(audio_data)
-            with open("response.wav", "wb") as audio_file:
-                audio_file.write(wav_bytes)
-
-            # Play the audio file
-
+                    # Write the new audio file
+                    wav_bytes = base64.b64decode(audio_data)
+                    with open("response.wav", "wb") as audio_file:
+                        audio_file.write(wav_bytes)
+                except Exception as e:
+                    print(f"Error handling response.wav: {e}")
 
             return gpt_response_text
 
@@ -180,7 +184,14 @@ class Character:
         self.voice_read()
 
     def voice_read(self):
-        playsound("response.wav")
+        pygame.mixer.init()
+        pygame.mixer.music.load("response.wav")
+        pygame.mixer.music.play()
+        while pygame.mixer.music.get_busy():
+            pygame.time.Clock().tick(10)
+        pygame.mixer.music.stop()
+        pygame.mixer.quit()
+        os.remove("response.wav")
 
     def listen(self):
         recognizer = sr.Recognizer()
