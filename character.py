@@ -12,6 +12,7 @@ from pydub import AudioSegment
 from pydub.playback import play
 import io
 import base64
+from playsound import playsound
 
 # Set your OpenAI API key. Alternatively, you can set the OPENAI_API_KEY
 # environment variable before running this script.
@@ -23,7 +24,9 @@ class Character:
         self.correct_answer = ""
         self.player_answer = ""
         self.user_text = ""
-        #######ADD THIS self.api_key=" "
+        with open("./key.txt", "r") as file:
+            self.api_key = file.readline().strip()
+
 
 
     def fetch_trivia_question(self):
@@ -135,7 +138,7 @@ class Character:
             "Explain the rules briefly and announce that the game has started. "
             "Let the player know the first question will appear shortly."
         )
-        response = self.generate_gpt_response(system_prompt, user_message)
+        self.generate_gpt_response(system_prompt, user_message)
         self.voice_read()
 
     def gpt_respond_correct(self):
@@ -177,8 +180,7 @@ class Character:
         self.voice_read()
 
     def voice_read(self):
-        audio = AudioSegment.from_file("response.wav", format="wav")
-        play(audio)
+        playsound("response.wav")
 
     def listen(self):
         recognizer = sr.Recognizer()
@@ -208,21 +210,46 @@ class Character:
                     print("Could not understand the audio. Please try again.")
                 except sr.RequestError as e:
                     print(f"Error with speech recognition service: {e}")
+        return self.player_answer
+    
+    def answer_click(self, answer):
+        self.player_answer = answer
+
+
 
     def find_answer(self):
         """
         Looks for the pattern 'final answer <some text>' in self.user_text.
         If found, store that as self.player_answer and clear the buffer.
+        If no match is found, checks if answer.txt is not empty and processes it.
         """
+        # Check for 'final answer' in voice chat
         match = re.search(r"final answer\s+(.+)", self.user_text.lower())
         if match:
-            print("Answer recorded")
+            print("Answer recorded from voice chat")
             self.player_chat = self.user_text[:match.start()].strip()
             self.player_answer = match.group(1).strip()
             self.gpt_learn_player()
             self.user_text = ""
             return True
+
+        # Check if answer.txt is not empty
+        elif os.path.exists("answer.txt") and os.path.getsize("answer.txt") > 0:
+            with open("answer.txt", "r") as file:
+                answer = file.readline().strip()
+                if answer:
+                    print("Answer recorded from answer.txt")
+                    self.player_answer = answer
+                    self.gpt_learn_player()
+                    self.user_text = ""
+
+                    # Clear the file
+                    open("answer.txt", "w").close()
+                    return True
+
+        # No answer found
         return False
+
 
     def evaluate_answer(self, player_answer):
         """Basic evaluation: case-insensitive exact match with self.correct_answer."""

@@ -4,3 +4,4 @@ speechrecognition
 pydub
 numpy
 openai
+playsound 

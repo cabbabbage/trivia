@@ -4,7 +4,17 @@ import requests
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QGridLayout, QLabel, QPushButton, QApplication, QSizeGrip, QDialog, QVBoxLayout, QLineEdit, QSpinBox, QHBoxLayout
 )
-from PyQt5.QtCore import Qt, QTimer, QPoint
+from PyQt5.QtCore import Qt, QTimer, QPoint, pyqtSignal, QEvent
+
+
+# ✅ Create a custom QLabel that emits a signal when Alt + Click is detected
+class ClickableLabel(QLabel):
+    alt_click = pyqtSignal(str)  # Signal to emit the text of the label when Alt + Click is detected
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton and QApplication.keyboardModifiers() == Qt.AltModifier:
+            self.alt_click.emit(self.text())  # Emit the signal with the label text
+
 
 # Import your Character class
 from character import Character
@@ -55,13 +65,14 @@ class OverlayWindow(QMainWindow):
         self.answer_labels = []
         for i in range(2):
             for j in range(2):
-                answer_label = QLabel("")
+                answer_label = ClickableLabel("")
                 answer_label.setStyleSheet(
                     "background-color: lightblue; "
                     "font-size: 20px; "
                     "padding: 10px;"
                 )
                 answer_label.setAlignment(Qt.AlignCenter)
+                answer_label.alt_click.connect(self.save_answer_to_file)  # Connect Alt + Click signal
                 self.layout.addWidget(answer_label, i + 1, j)
                 self.answer_labels.append(answer_label)
 
@@ -108,6 +119,12 @@ class OverlayWindow(QMainWindow):
         random_variability = random.randint(-10, 10)
         adjusted_rate = max(1, (self.rate + random_variability))
         QTimer.singleShot(adjusted_rate * 1000, self.ask_question)
+
+    def save_answer_to_file(self, answer):
+        """Save the clicked answer to 'answer.txt', replacing any existing content."""
+        with open("answer.txt", "w") as file:
+            file.write(answer)
+        print(f"Answer saved: {answer}")
 
     # Drag the window
     def mousePressEvent(self, event):
@@ -178,3 +195,4 @@ if __name__ == "__main__":
         main(user_prompt, user_rate)
     else:
         sys.exit(0)
+
